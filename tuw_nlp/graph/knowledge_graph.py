@@ -121,11 +121,39 @@ class KnowledgeNode(str):
             if re.match(r'[a-zA-Z_]+\.[arsnv]\.[0-9]{2}', other) is not None and self.synset is not None:
                 try:
                     synset = wn.synset(other)
-                    if synset.wup_similarity(wn.synset(self.synset.name())) >= 0.8:
+                    if synset.wup_similarity(wn.synset(self.synset.name())) >= 0.9:
                         return True
                 except ValueError as e:
                     print(e)
-                return False
+            if self.concept is not None:
+                if re.match(r'[a-zA-Z_]+\.[arsnv]\.[0-9]{2}', other) is not None:
+                    other_word = re.findall(r'([a-zA-Z_]+)\.[arsnv]\.[0-9]{2}', other)[0]
+                    wn_pos = {'a': 'ADJ', 'r': 'ADV', 's': 'PART', 'n': 'NOUN', 'v': 'VERB'}
+                    pos = re.findall(r'[a-zA-Z_]+\.([arsnv])\.[0-9]{2}', other)[0]
+                    func = wn.synset(other)._lexname.split('.')[-1]
+                else:
+                    other_word = other
+                    pos = self.pos
+                    func = None
+                possible_concept = Label.get_or_none(text=other_word)
+                concept_pos = {'ADJ': 'a', 'ADV': 'r', 'NOUN': 'n', 'VERB': 'v'}
+                if pos in concept_pos and possible_concept is not None:
+                    possible_concept = possible_concept.concepts
+                    if func is not None:
+                        concept = [c for c in possible_concept if
+                                   len(re.findall(f"^{concept_pos[pos]}[/$]*", c.sense_label)) > 0 and
+                                   len(re.findall(f"{func}", c.sense_label)) > 0]
+                    else:
+                        concept = [c for c in possible_concept if
+                                   len(re.findall(f"^{concept_pos[pos]}[/$]*", c.sense_label)) > 0]
+                    if len(concept) != 0:
+                        breakpoint()
+                    inter = set(concept).intersection(self.concept)
+                    if len(inter) > 0:
+                        return True
+                    #edges = [e for e in edges_between(self.concept, concept) if e.relation.name in ["is_a", "related_to"]]
+                    #if len(edges) > 0:
+                    #    return True
             return self.reg_match(other)
 
     def __hash__(self):

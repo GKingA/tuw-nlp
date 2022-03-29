@@ -15,7 +15,7 @@ from tuw_nlp.text.pipeline import CachedStanzaPipeline, CustomStanzaPipeline
 from tuw_nlp.text.preprocessor import Preprocessor
 
 
-class TextTo4lang:
+class To4lang:
     def __init__(self, lang, nlp_cache, cache_dir=None):
         if lang == 'de':
             nlp = CustomStanzaPipeline(
@@ -67,7 +67,7 @@ class TextTo4lang:
                     elem not in node_data
                     for elem in ["expanded", "substituted"]):
                 node = graph.d_clean(node_data["name"]).split('_')[0]
-                if(node not in self.lexicon.stopwords or d_node == graph.root):
+                if node not in self.lexicon.stopwords or d_node == graph.root:
                     definition = self.lexicon.get_definition(node)
                     if definition:
                         definition_nodes = self.add_definition(
@@ -88,6 +88,15 @@ class TextTo4lang:
         return relabeled_graph, self.graph_lexical.vocab.get_id(
             graph.nodes[root]["name"])
 
+    def __enter__(self):
+        self.nlp.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.nlp.__exit__(exc_type, exc_value, exc_traceback)
+
+
+class TextTo4lang(To4lang):
     def __call__(self, text, depth=0, substitute=False, expand_set=set(), strategy="None"):
         for sen in self.nlp(text).sentences:
             graph, root = self.parse(sen)
@@ -97,12 +106,16 @@ class TextTo4lang:
             self.expand(fourlang, depth=depth, substitute=substitute, expand_set=expand_set, strategy=strategy)
             yield fourlang.G
 
-    def __enter__(self):
-        self.nlp.__enter__()
-        return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.nlp.__exit__(exc_type, exc_value, exc_traceback)
+class UDTo4lang(To4lang):
+    def __call__(self, doc, depth=0, substitute=False, expand_set=set(), strategy="None"):
+        for sen in doc.sentences:
+            graph, root = self.parse(sen)
+
+            fourlang = FourLang(graph, root, self.graph_lexical)
+
+            self.expand(fourlang, depth=depth, substitute=substitute, expand_set=expand_set, strategy=strategy)
+            yield fourlang#.G
 
 
 def get_args():

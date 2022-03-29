@@ -500,6 +500,8 @@ class CFLLexicon(BaseLexicon):
             # Aussenminister ... der strunzdumm ist
             ("NOUN", "ACL", "ADJ"),
             ("NOUN", "NUMMOD", "NUM"),
+            ("NOUN", "NUMMOD", "NOUN"),
+            ("NOUN", "NMOD", "NOUN"),
             ("NUM", "ADVMOD", "ADV"),
             # maximal 6,0 m
             ("NUM", "ADVMOD", "ADJ"),
@@ -585,7 +587,10 @@ class CFLLexicon(BaseLexicon):
             ("PROPN", "FLAT", "PROPN"): [r("0")],
             ("NOUN", "COMPOUND", "NOUN"): [r("0")],
             # Rede ... jetzt
-            ("NOUN", "APPOS", "ADV"): [r("0")]
+            ("NOUN", "APPOS", "ADV"): [r("0")],
+            ("NOUN", "NMOD", "NOUN"): [r("0")],
+            # Million Euro
+            ("NOUN", "NUMMOD", "NOUN"): [r("0")]
         }
 
         self.bin_fnc.update({edge: [r("0")] for edge in self.mod_edges})
