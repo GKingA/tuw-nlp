@@ -588,9 +588,12 @@ class CFLLexicon(BaseLexicon):
             ("NOUN", "COMPOUND", "NOUN"): [r("0")],
             # Rede ... jetzt
             ("NOUN", "APPOS", "ADV"): [r("0")],
+            ("NOUN", "APPOS", "NOUN"): [r("0")],
             ("NOUN", "NMOD", "NOUN"): [r("0")],
             # Million Euro
-            ("NOUN", "NUMMOD", "NOUN"): [r("0")]
+            ("NOUN", "NUMMOD", "NOUN"): [r("0")],
+            ("VERB", "NSUBJ", "NUM"): [r("0")],
+            ("AUX", "NSUBJ", "NOUN"): [r("0")]
         }
 
         self.bin_fnc.update({edge: [r("0")] for edge in self.mod_edges})

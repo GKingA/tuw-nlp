@@ -17,7 +17,7 @@ class FourLang(Graph):
         self.expanded = False
 
     def merge_definition_graph(self, graph, node, substitute=False):
-        if graph.root != None:
+        if graph.root is not None:
             graph_root = graph.root
             F = nx.compose(self.G, graph.G)
             if substitute:
