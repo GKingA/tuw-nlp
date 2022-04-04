@@ -42,7 +42,8 @@ setup(
         'nltk',
         "graphviz",
         "conceptnet-lite",
-        "pywsd"
+        "pywsd",
+        "python-Levenshtein"
     ],
     packages=find_packages(),
     include_package_data=True,

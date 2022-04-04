@@ -26,3 +26,10 @@ def download_definitions():
 
             with ZipFile(file_path, 'r') as zf:
                 zf.extractall(os.path.expanduser("~/tuw_nlp_resources/"))
+
+
+def download_conceptnet():
+    from conceptnet_lite.db import prepare_db
+    basepath = os.path.expanduser("~/tuw_nlp_resources")
+    if not os.path.exists(os.path.join(basepath, "conceptnet.db")):
+        prepare_db(os.path.join(basepath, "conceptnet.db"))

@@ -6,6 +6,7 @@ import nltk
 import stanza
 from tuw_nlp.text.pipeline import CachedStanzaPipeline
 from tuw_nlp.graph.utils import Graph
+from tuw_nlp.utils import download_conceptnet
 
 # Wordnet
 from nltk.corpus import wordnet as wn
@@ -21,20 +22,12 @@ from pywsd.lesk import simple_lesk, cosine_lesk, adapted_lesk, original_lesk
 from networkx.algorithms.isomorphism import DiGraphMatcher
 
 # Download wordnet
-basepath = os.path.dirname(__file__)
 nltk.download('wordnet')
 
-# Download conceptnet db
-if not os.path.exists(os.path.join(basepath, "conceptnet/conceptnet.db")):
-    answer = input("Would you like to download ConceptNet? It might take more than an hour. (Yes/no)")
-    if not answer.lower().startswith('n'):
-        use_conceptnet = True
-        conceptnet_lite.connect(os.path.join(basepath, "conceptnet/conceptnet.db"), db_download_url=None)
-    else:
-        use_conceptnet = False
-else:
-    use_conceptnet = True
-    conceptnet_lite.connect(os.path.join(basepath, "conceptnet/conceptnet.db"))
+# Download conceptnet
+basepath = os.path.expanduser("~/tuw_nlp_resources")
+download_conceptnet()
+conceptnet_lite.connect(os.path.join(basepath, "conceptnet/conceptnet.db"))
 
 
 class KnowledgeNode(str):

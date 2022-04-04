@@ -1,5 +1,9 @@
+import os.path
 import re
 from collections import defaultdict
+
+import numpy as np
+from Levenshtein import distance
 
 import networkx as nx
 from networkx import algorithms
@@ -100,3 +104,17 @@ class FourLang(Graph):
             cl = self.d_clean(node["name"])
             nodes_cleaned.append(cl)
         return nodes_cleaned
+
+    def restore_accents(self, nodes):
+        node_dict = {}
+        for node in self.G.nodes(data=True):
+            new_form_index = np.argmin([distance(node[1]["name"], orig_node) for orig_node in nodes])
+            node_dict[node[0]] = {"name": nodes[new_form_index]}
+        nx.set_node_attributes(self.G, node_dict)
+        return self.G
+
+    def delete_nodes(self, delete_list):
+        self.G.remove_nodes_from(delete_list)
+
+    def update_nodes(self, node_dict):
+        nx.set_node_attributes(self.G, node_dict)

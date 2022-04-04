@@ -78,6 +78,20 @@ class To4lang:
         self.expand(graph, depth-1, substitute=substitute,
                     expand_set=expand_set, strategy=strategy)
 
+    def negate(self, graph):
+        node_dict = {}
+        delete_list = []
+        for adj in graph.G.adj.items():
+            adjacents = {graph.G.nodes(data=True)[edge[0]]["name"]: edge[0]
+                         for edge in adj[1].items() if edge[1]["color"] == 0}
+            if "NEG" in adjacents:
+                root_antonym = self.lexicon.get_antonym(graph.G.nodes(data=True)[adj[0]]["name"])
+                if root_antonym is not None:
+                    node_dict[adj[0]] = {"name": root_antonym}
+                    delete_list.append(adjacents["NEG"])
+        graph.delete_nodes(delete_list)
+        graph.update_nodes(node_dict)
+
     def parse(self, sen):
         fl = self.ud_fl.parse(sen, 'ud', "fl", 'amr-sgraph-src')
 
@@ -115,6 +129,8 @@ class UDTo4lang(To4lang):
             fourlang = FourLang(graph, root, self.graph_lexical)
 
             self.expand(fourlang, depth=depth, substitute=substitute, expand_set=expand_set, strategy=strategy)
+            fourlang.restore_accents([w.lemma for s in doc.sentences for w in s.words])
+            self.negate(fourlang)
             yield fourlang#.G
 
 

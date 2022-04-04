@@ -50,11 +50,6 @@ class UD_FL(IRTGGrammar):
             clemma = preprocess_node_alto(graph.nodes[j]['lemma'])
             deprel = preprocess_edge_alto(edge['deprel'])
             cpos = cnode['upos']
-            """if 'feats' in cnode:
-                feats = {feature_name: feature for (feature_name, feature) in
-                         [feat.split('=') for feat in cnode['feats'].split('|')]}
-                if "Polarity" in feats and feats["Polarity"] == "Neg":
-                    cpos += "_NEG" """
 
             binary_fss = self.lexicon.get_dependency_rules(pos, deprel, cpos)
             for k, binary_fs in enumerate(binary_fss):

@@ -626,6 +626,9 @@ class CFLLexicon(BaseLexicon):
             "muessen": [
                 n('OBL')
             ],
+            "sollen": [
+                n('OBL')
+            ],
             "zulaessig": [
                 n('PER')
             ],

@@ -1,27 +1,53 @@
 import os
 import re
+import json
 from collections import defaultdict
 from nltk.corpus import stopwords as nltk_stopwords
+from tqdm import tqdm
+
 from tuw_nlp.graph.utils import preprocess_node_alto
+import networkx as nx
 
 
 class Dictionary():
     def __init__(self, lang):
         self.lexicon = defaultdict(list)
+        self.antonyms = defaultdict(list)
+        self.concept_graph = None
         self.lang_map = {}
         base_fn = os.path.dirname(os.path.abspath(__file__))
         langnames_fn = os.path.join(base_fn, "langnames")
 
         self.lang = lang
+        self.base_path = os.path.expanduser("~/tuw_nlp_resources")
 
-        definitions_base_fn = os.path.join(os.path.expanduser(
-            "~/tuw_nlp_resources"), "definitions", lang.split("_")[0])
+        definitions_base_fn = os.path.join(self.base_path, "definitions", lang.split("_")[0])
+
+        antonyms_base_fn = os.path.join(self.base_path, "antonyms", f"{lang.split('_')[0]}.json")
 
         definitions_fn = None
         if os.path.isfile(definitions_base_fn):
             definitions_fn = definitions_base_fn
 
         assert definitions_fn, 'Definition dictionaries are not downloaded, for setup please use tuw_nlp.download_definitions(), otherwise you will not be able to use expand functionalities'
+
+        antonyms_fn = None
+        if os.path.isfile(antonyms_base_fn):
+            antonyms_fn = antonyms_base_fn
+
+        if antonyms_fn is None:
+            create = input("The antonyms are not available. Do you wish to create them? (Y/n)")
+            if not create.lower().startswith("n"):
+                os.makedirs(os.path.dirname(antonyms_base_fn), exist_ok=True)
+                self.create_antonyms()
+                with open(antonyms_base_fn, "w") as antonyms_file:
+                    json.dump(self.antonyms, antonyms_file)
+                self.concept_graph = nx.MultiDiGraph()
+                self.concept_graph
+
+        else:
+            with open(antonyms_base_fn, "w") as antonyms_file:
+                self.antonyms = json.load(antonyms_file)
 
         with open(langnames_fn, "r", encoding="utf8") as f:
             for line in f:
@@ -80,3 +106,35 @@ class Dictionary():
 
     def get_definition(self, word):
         return self.lexicon[word][0] if self.lexicon[word] else None
+
+    def create_antonyms(self):
+        from conceptnet_lite import connect, Language
+        assert os.path.exists(os.path.join(self.base_path, "conceptnet.db")), \
+            "To be able to access antonyms, please download conceptnet using tuw_nlp.download_conceptnet()"
+
+        self.concept_graph = nx.MultiDiGraph()
+
+        connect(os.path.join(self.base_path, "conceptnet.db"))
+        current_language = Language.get(name=self.lang)
+        for label in tqdm(current_language.labels):
+            label_name = ' '.join(label.text.split('_'))
+            for c in label.concepts:
+                if c.edges_out:
+                    for e in c.edges_out:
+                        if e.end.label.language is None or e.end.label.language.name == self.lang:
+                            other = ' '.join(e.end.label.text.split('_'))
+                            self.concept_graph.add_edge(label_name, other, name=e.relation.name)
+                            if e.relation.name == "antonym":
+                                if label_name not in self.antonyms:
+                                    self.antonyms[label_name] = []
+                                if other not in self.antonyms:
+                                    self.antonyms[other] = []
+                                if other not in self.antonyms[label_name]:
+                                    self.antonyms[label_name].append(other)
+                                if label_name not in self.antonyms[other]:
+                                    self.antonyms[other].append(label_name)
+
+    def get_antonym(self, text):
+        if text in self.antonyms:
+            return self.antonyms[text][0]
+        return None
