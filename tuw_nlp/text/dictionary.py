@@ -24,6 +24,7 @@ class Dictionary():
         definitions_base_fn = os.path.join(self.base_path, "definitions", lang.split("_")[0])
 
         antonyms_base_fn = os.path.join(self.base_path, "antonyms", f"{lang.split('_')[0]}.json")
+        concept_graphs_base_fn = os.path.join(self.base_path, "concept_graphs", f"{lang.split('_')[0]}.json")
 
         definitions_fn = None
         if os.path.isfile(definitions_base_fn):
@@ -39,15 +40,20 @@ class Dictionary():
             create = input("The antonyms are not available. Do you wish to create them? (Y/n)")
             if not create.lower().startswith("n"):
                 os.makedirs(os.path.dirname(antonyms_base_fn), exist_ok=True)
+                os.makedirs(os.path.dirname(concept_graphs_base_fn), exist_ok=True)
                 self.create_antonyms()
                 with open(antonyms_base_fn, "w") as antonyms_file:
                     json.dump(self.antonyms, antonyms_file)
-                self.concept_graph = nx.MultiDiGraph()
-                self.concept_graph
+                concept_json = nx.node_link_data(self.concept_graph)
+                with open(concept_graphs_base_fn, "w") as concepts_file:
+                    json.dump(concept_json, concepts_file)
 
         else:
-            with open(antonyms_base_fn, "w") as antonyms_file:
+            with open(antonyms_base_fn, "r") as antonyms_file:
                 self.antonyms = json.load(antonyms_file)
+            with open(concept_graphs_base_fn, "r") as concepts_file:
+                concept_json = json.load(concepts_file)
+                self.concept_graph = nx.node_link_graph(concept_json)
 
         with open(langnames_fn, "r", encoding="utf8") as f:
             for line in f:
@@ -112,7 +118,7 @@ class Dictionary():
         assert os.path.exists(os.path.join(self.base_path, "conceptnet.db")), \
             "To be able to access antonyms, please download conceptnet using tuw_nlp.download_conceptnet()"
 
-        self.concept_graph = nx.MultiDiGraph()
+        #self.concept_graph = nx.MultiDiGraph()
 
         connect(os.path.join(self.base_path, "conceptnet.db"))
         current_language = Language.get(name=self.lang)

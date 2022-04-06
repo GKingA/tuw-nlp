@@ -85,10 +85,17 @@ class To4lang:
             adjacents = {graph.G.nodes(data=True)[edge[0]]["name"]: edge[0]
                          for edge in adj[1].items() if edge[1]["color"] == 0}
             if "NEG" in adjacents:
-                root_antonym = self.lexicon.get_antonym(graph.G.nodes(data=True)[adj[0]]["name"])
-                if root_antonym is not None:
-                    node_dict[adj[0]] = {"name": root_antonym}
+                if graph.G.nodes(data=True)[adj[0]]["name"] == "PER":
+                    node_dict[adj[0]] = {"name": "FOR"}
                     delete_list.append(adjacents["NEG"])
+                elif graph.G.nodes(data=True)[adj[0]]["name"] == "FOR":
+                    node_dict[adj[0]] = {"name": "PER"}
+                    delete_list.append(adjacents["NEG"])
+                else:
+                    root_antonym = self.lexicon.get_antonym(graph.G.nodes(data=True)[adj[0]]["name"])
+                    if root_antonym is not None:
+                        node_dict[adj[0]] = {"name": root_antonym}
+                        delete_list.append(adjacents["NEG"])
         graph.delete_nodes(delete_list)
         graph.update_nodes(node_dict)
 
@@ -130,8 +137,21 @@ class UDTo4lang(To4lang):
 
             self.expand(fourlang, depth=depth, substitute=substitute, expand_set=expand_set, strategy=strategy)
             fourlang.restore_accents([w.lemma for s in doc.sentences for w in s.words])
+            #self.print_graph(fourlang)
             self.negate(fourlang)
+            #self.print_graph(fourlang)
             yield fourlang#.G
+
+    def print_graph(self, fourlang):
+        import graphviz
+
+        vis_graph = graphviz.Digraph()
+        for node in fourlang.G.nodes(data=True):
+            vis_graph.node(str(node[0]), node[1]["name"])
+        for edge in fourlang.G.edges(data=True):
+            vis_graph.edge(str(edge[0]), str(edge[1]), str(edge[2]["color"]))
+        g = graphviz.Source(vis_graph.source)
+        g.view()
 
 
 def get_args():

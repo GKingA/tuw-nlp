@@ -108,9 +108,10 @@ class FourLang(Graph):
     def restore_accents(self, nodes):
         node_dict = {}
         for node in self.G.nodes(data=True):
-            new_form_index = np.argmin([distance(node[1]["name"], orig_node) for orig_node in nodes])
-            node_dict[node[0]] = {"name": nodes[new_form_index]}
-        nx.set_node_attributes(self.G, node_dict)
+            if node[1]["name"] not in ["NEG", "OBL", "PER", "EXC", "FOR", "COORD"]:
+                new_form_index = np.argmin([distance(node[1]["name"], orig_node) for orig_node in nodes])
+                node_dict[node[0]] = {"name": nodes[new_form_index]}
+            nx.set_node_attributes(self.G, node_dict)
         return self.G
 
     def delete_nodes(self, delete_list):

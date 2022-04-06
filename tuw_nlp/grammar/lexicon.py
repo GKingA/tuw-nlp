@@ -518,6 +518,8 @@ class CFLLexicon(BaseLexicon):
             ("VERB", "AUX", "AUX"),
             # liegen -> Baulinie, sample 6
             # ("VERB", "OBL", "NOUN"),
+            # mindestens nicht
+            ("ADV", "ADVMOD", "PART"),
         }
 
         self.mod_edges |= {
@@ -593,7 +595,8 @@ class CFLLexicon(BaseLexicon):
             # Million Euro
             ("NOUN", "NUMMOD", "NOUN"): [r("0")],
             ("VERB", "NSUBJ", "NUM"): [r("0")],
-            ("AUX", "NSUBJ", "NOUN"): [r("0")]
+            ("AUX", "NSUBJ", "NOUN"): [r("0")],
+            ("ADV", "PARATAXIS", "VERB"): [r("2")]
         }
 
         self.bin_fnc.update({edge: [r("0")] for edge in self.mod_edges})
