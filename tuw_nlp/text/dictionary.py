@@ -13,7 +13,7 @@ class Dictionary():
     def __init__(self, lang):
         self.lexicon = defaultdict(list)
         self.antonyms = defaultdict(list)
-        self.concept_graph = None
+        self.concept_graph = nx.MultiDiGraph()
         self.lang_map = {}
         base_fn = os.path.dirname(os.path.abspath(__file__))
         langnames_fn = os.path.join(base_fn, "langnames")
@@ -36,24 +36,45 @@ class Dictionary():
         if os.path.isfile(antonyms_base_fn):
             antonyms_fn = antonyms_base_fn
 
-        if antonyms_fn is None:
-            create = input("The antonyms are not available. Do you wish to create them? (Y/n)")
-            if not create.lower().startswith("n"):
-                os.makedirs(os.path.dirname(antonyms_base_fn), exist_ok=True)
-                os.makedirs(os.path.dirname(concept_graphs_base_fn), exist_ok=True)
-                self.create_antonyms()
-                with open(antonyms_base_fn, "w") as antonyms_file:
-                    json.dump(self.antonyms, antonyms_file)
-                concept_json = nx.node_link_data(self.concept_graph)
-                with open(concept_graphs_base_fn, "w") as concepts_file:
-                    json.dump(concept_json, concepts_file)
+        concept_graphs_fn = None
+        if os.path.isfile(concept_graphs_base_fn):
+            concept_graphs_fn = concept_graphs_base_fn
 
-        else:
+        if antonyms_fn is not None and concept_graphs_fn is not None:
             with open(antonyms_base_fn, "r") as antonyms_file:
                 self.antonyms = json.load(antonyms_file)
             with open(concept_graphs_base_fn, "r") as concepts_file:
                 concept_json = json.load(concepts_file)
                 self.concept_graph = nx.node_link_graph(concept_json)
+        elif antonyms_fn is not None:
+            with open(antonyms_base_fn, "r") as antonyms_file:
+                self.antonyms = json.load(antonyms_file)
+            create = input("The concept_graphs are not available. Do you wish to create them? (Y/n)")
+            if not create.lower().startswith("n"):
+                os.makedirs(os.path.dirname(concept_graphs_base_fn), exist_ok=True)
+                self.create_antonyms_and_concept_graphs(antonyms=False)
+                concept_json = nx.node_link_data(self.concept_graph)
+                with open(concept_graphs_base_fn, "w") as concepts_file:
+                    json.dump(concept_json, concepts_file, indent=4)
+        elif concept_graphs_fn is not None:
+            os.makedirs(os.path.dirname(antonyms_base_fn), exist_ok=True)
+            with open(concept_graphs_base_fn, "r") as concepts_file:
+                concept_json = json.load(concepts_file)
+                self.concept_graph = nx.node_link_graph(concept_json)
+            self.get_antonyms_from_concept_graph()
+            with open(antonyms_base_fn, "w") as antonyms_file:
+                json.dump(self.antonyms, antonyms_file, indent=4)
+        else:
+            create = input("The antonyms and concept_graphs are not available. Do you wish to create them? (Y/n)")
+            if not create.lower().startswith("n"):
+                os.makedirs(os.path.dirname(antonyms_base_fn), exist_ok=True)
+                os.makedirs(os.path.dirname(concept_graphs_base_fn), exist_ok=True)
+                self.create_antonyms_and_concept_graphs()
+                with open(antonyms_base_fn, "w") as antonyms_file:
+                    json.dump(self.antonyms, antonyms_file, indent=4)
+                concept_json = nx.node_link_data(self.concept_graph)
+                with open(concept_graphs_base_fn, "w") as concepts_file:
+                    json.dump(concept_json, concepts_file, indent=4)
 
         with open(langnames_fn, "r", encoding="utf8") as f:
             for line in f:
@@ -113,12 +134,27 @@ class Dictionary():
     def get_definition(self, word):
         return self.lexicon[word][0] if self.lexicon[word] else None
 
-    def create_antonyms(self):
+    def get_antonyms_from_concept_graph(self):
+        for root, edges in self.concept_graph.adj._atlas.items():
+            for end, edge_dict in edges.items():
+                edge_names = [edge["name"] for edge in edge_dict.values()]
+                if "antonym" in edge_names:
+                    if root not in self.antonyms:
+                        self.antonyms[root] = [end]
+                    elif end not in self.antonyms[root]:
+                        self.antonyms[root].append(end)
+                    if end not in self.antonyms:
+                        self.antonyms[end] = [root]
+                    elif root not in self.antonyms[end]:
+                        self.antonyms[end].append(root)
+
+    def create_antonyms_and_concept_graphs(self, antonyms=True, concept_graphs=True):
+        if not antonyms and not concept_graphs:
+            return
+
         from conceptnet_lite import connect, Language
         assert os.path.exists(os.path.join(self.base_path, "conceptnet.db")), \
             "To be able to access antonyms, please download conceptnet using tuw_nlp.download_conceptnet()"
-
-        #self.concept_graph = nx.MultiDiGraph()
 
         connect(os.path.join(self.base_path, "conceptnet.db"))
         current_language = Language.get(name=self.lang)
@@ -127,10 +163,12 @@ class Dictionary():
             for c in label.concepts:
                 if c.edges_out:
                     for e in c.edges_out:
-                        if e.end.label.language is None or e.end.label.language.name == self.lang:
+                        if (e.end.label.language is None or e.end.label.language.name == self.lang) \
+                                and e.relation.name != "external_url":
                             other = ' '.join(e.end.label.text.split('_'))
-                            self.concept_graph.add_edge(label_name, other, name=e.relation.name)
-                            if e.relation.name == "antonym":
+                            if concept_graphs:
+                                self.concept_graph.add_edge(label_name, other, name=e.relation.name)
+                            if antonyms and e.relation.name == "antonym":
                                 if label_name not in self.antonyms:
                                     self.antonyms[label_name] = []
                                 if other not in self.antonyms:
@@ -139,6 +177,7 @@ class Dictionary():
                                     self.antonyms[label_name].append(other)
                                 if label_name not in self.antonyms[other]:
                                     self.antonyms[other].append(label_name)
+        # Realtions in de: 'distinct_from', 'antonym', 'derived_from', 'etymologically_related_to', 'is_a', 'part_of', 'external_url', 'related_to', 'form_of', 'etymologically_derived_from', 'synonym', 'similar_to'
 
     def get_antonym(self, text):
         if text in self.antonyms:
