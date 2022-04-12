@@ -164,7 +164,9 @@ class Dictionary():
                 if c.edges_out:
                     for e in c.edges_out:
                         if (e.end.label.language is None or e.end.label.language.name == self.lang) \
-                                and e.relation.name != "external_url":
+                                and e.relation.name != "external_url" \
+                                and (("wiktionary" in e.etc["dataset"] and e.etc["dataset"].endswith(self.lang))
+                                     or "wiktionary" not in e.etc["dataset"]):
                             other = ' '.join(e.end.label.text.split('_'))
                             if concept_graphs:
                                 self.concept_graph.add_edge(label_name, other, name=e.relation.name)
