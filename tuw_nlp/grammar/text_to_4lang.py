@@ -53,7 +53,7 @@ class To4lang:
 
         return [node[1]["name"] for node in fourlang_graph.G.nodes(data=True)]
 
-    def expand(self, graph, depth=1, substitute=False, expand_set=set(), strategy="None"):
+    def expand(self, graph, depth=1, substitute=False, expand_set=set(), strategy="None", use_concept_def=False):
         if depth == 0:
             return
 
@@ -67,16 +67,41 @@ class To4lang:
                     elem not in node_data
                     for elem in ["expanded", "substituted"]):
                 node = graph.d_clean(node_data["name"]).split('_')[0]
-                if node not in self.lexicon.stopwords or d_node == graph.root:
-                    definition = self.lexicon.get_definition(node)
-                    if definition:
-                        definition_nodes = self.add_definition(
-                            graph, d_node, definition, substitute, strategy)
+                if (not expand_set and (node not in self.lexicon.stopwords or d_node == graph.root)) or expand_set:
+                    if use_concept_def:
+                        related_words = self.expand_with_concept(graph, d_node)
                         if expand_set:
-                            expand_set |= set(definition_nodes)
+                            expand_set |= set(related_words)
+                    else:
+                        definition = self.lexicon.get_definition(node)
+                        if definition:
+                            definition_nodes = self.add_definition(
+                                graph, d_node, definition, substitute, strategy)
+                            if expand_set:
+                                expand_set |= set(definition_nodes)
 
         self.expand(graph, depth-1, substitute=substitute,
-                    expand_set=expand_set, strategy=strategy)
+                    expand_set=expand_set, strategy=strategy, use_concept_def=use_concept_def)
+
+    def expand_with_concept(self, graph, node):
+        negative_names = {"antonym", "distinct_from"}
+        positive_names = {"is_a", "synonym", "form_of", "derived_from"}
+        word = graph.G.nodes()[node]["name"]
+        index = node * 100
+        words = []
+        if word in self.lexicon.concept_graph.adj:
+            adjacency = self.lexicon.concept_graph.adj[word]
+            for adj in adjacency._atlas.items():
+                edge_names = [attributes["name"] for (_, attributes) in adj[1].items()]
+                if len(negative_names.intersection(edge_names)) == 0 and \
+                        len(positive_names.intersection(edge_names)) > 0:
+                    print(word, adj[0], edge_names)
+                    graph.G.nodes[node]['expanded'] = True
+                    graph.G.add_node(index, name=adj[0])
+                    graph.G.add_edge(node, index, color=0)
+                    words.append(adj[0])
+                    index += 1
+        return words
 
     def negate(self, graph):
         node_dict = {}
