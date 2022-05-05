@@ -89,8 +89,8 @@ def get_concept_weight(start, end, attr):
 @functools.lru_cache(maxsize=1024)
 def hashable_concept_distance(node1, node2):
     try:
-        sp = nx.shortest_path(UT4.lexicon.concept_graph, node1, node2, weight=get_concept_weight)
-        #visualize_concept_path(sp)
+        sp = nx.shortest_path_length(UT4.lexicon.concept_graph, node1, node2, weight=get_concept_weight)
+        # visualize_concept_path(sp)
         return sp
     except nx.exception.NetworkXNoPath:
         return None
@@ -103,7 +103,7 @@ def concept_distance(node1, node2):
     if node1["name"] in UT4.lexicon.concept_graph.nodes() and node2["name"] in UT4.lexicon.concept_graph.nodes():
         sp = hashable_concept_distance(node1["name"].lower(), node2["name"].lower())
         if sp is not None:
-            return len(sp) < 5
+            return sp <= 11
     return False
 
 
@@ -121,8 +121,9 @@ def select_nodes_for_expand(fourlang_graph, pattern_graph):
         sub = FourLang(fourlang_graph)
         UT4.expand(sub, depth=2, expand_set=set([n[1]["name"] for n in subgraph.nodes()._nodes.items()]),
                    use_concept_def=True)
-        graphviz.Source(sub.to_dot(), format="png").view()
-        breakpoint()
+        #graphviz.Source(sub.to_dot(), format="png").view()
+        nx.set_node_attributes(subgraph, mapping, name="mapping")
+        subgraphs.append(subgraph)
     return subgraphs
 
 
@@ -171,42 +172,63 @@ if __name__ == '__main__':
     index = 0
 
     maximal_graph = pn_to_graph("(u_1 / .* :0 (u_2 / maximal))")[0]
-
+    
     vis_graph = graphviz.Digraph()
-    path = nx.shortest_path(UT4.lexicon.concept_graph, target="bis", weight=get_concept_weight)
-    target_bis = nx.shortest_path(UT4.lexicon.concept_graph, source="maximal", target="bis", weight=get_concept_weight)
-    source_bis = nx.shortest_path(UT4.lexicon.concept_graph, target="maximal", source="bis", weight=get_concept_weight)
+    path = nx.shortest_path(UT4.lexicon.concept_graph, target="maximal", weight=get_concept_weight)
+    path_l = nx.shortest_path_length(UT4.lexicon.concept_graph, target="maximal", weight=get_concept_weight)
+    path_length_5 = set([node for p in path.items() if path_l[p[0]] <= 11 for node in p[1]])
+    visualize_concept_path(path_length_5)
+    try:
+        target_bis = nx.shortest_path(UT4.lexicon.concept_graph, source="maximal", target="unterschreiten", weight=get_concept_weight)
+    except:
+        target_bis = []
+    try:
+        source_bis = nx.shortest_path(UT4.lexicon.concept_graph, target="maximal", source="unterschreiten", weight=get_concept_weight)
+    except:
+        source_bis = []
     nodes = []
     for node in target_bis + source_bis:
         if node not in nodes:
             nodes.append(node)
     visualize_concept_path(nodes)
 
-    maximal = wn.synset("maximal.a.01")
+    # maximal = wn.synset("maximal.a.01")
     matches = []
     matches2 = []
     matches3 = []
-    for i, i_tree in enumerate(trees[index:index+1000]):
+    matches4 = []
+    words_of_interest = ["maximal", "maximum", "überschreit", "unterschreit", " bis ", "höchstens"]
+    for i, i_tree in enumerate(trees[index:index + 1000]):
+        text = i_tree.metadata['text'].lower()
+        words_in = [w for w in words_of_interest if w in text]
+        if len(words_in) > 0:
+            matches4.append(i + index)
+            print(f"TEXT: {i_tree.metadata['text']}\n{words_in}")
         try:
             ud, fourlang = get_ud_and_4lang(i_tree)
             match = graph_matcher(fourlang.G, maximal_graph)
             match2 = syns_graph_matcher(fourlang.G, maximal_graph)
             match3 = select_nodes_for_expand(fourlang.G, maximal_graph)
             if match is not None:
-                matches.append(i+index)
+                matches.append(i + index)
                 print(f"MAXIMAL: {i_tree.metadata['text']}")
             if match2 is not None:
-                matches2.append(i+index)
+                matches2.append(i + index)
                 print(f"SYNSET: {i_tree.metadata['text']}")
             if match3 is not None:
-                matches3.append(i+index)
-                print(f"CONCEPT: {i_tree.metadata['text']}")
+                matches3.append(i + index)
+                print(f"CONCEPT: {i_tree.metadata['text']}\n{[m3.nodes(data=True) for m3 in match3]}")
         except TypeError:
-            print(i+index)
+            print(i + index)
+    print("String match in graph (just maximal):")
     print(len(matches))
     print(matches)
+    print("OdeNet match:")
     print(len(matches2))
     print(matches2)
+    print("Concept match:")
     print(len(matches3))
     print(matches3)
-
+    print("String match in text (maximal, maximum, bis, überschreiten, unterschreiten, höchstens):")
+    print(len(matches4))
+    print(matches4)

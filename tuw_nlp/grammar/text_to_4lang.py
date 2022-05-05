@@ -95,7 +95,6 @@ class To4lang:
                 edge_names = [attributes["name"] for (_, attributes) in adj[1].items()]
                 if len(negative_names.intersection(edge_names)) == 0 and \
                         len(positive_names.intersection(edge_names)) > 0:
-                    print(word, adj[0], edge_names)
                     graph.G.nodes[node]['expanded'] = True
                     graph.G.add_node(index, name=adj[0])
                     graph.G.add_edge(node, index, color=0)
