@@ -2,6 +2,7 @@ import logging
 import re
 from copy import deepcopy
 from itertools import chain, product
+from typing import List
 
 import networkx as nx
 import penman as pn
@@ -706,6 +707,13 @@ def test_graph_complex():
     in_graph_str = "(u_1<root> / ausbilden  :2 (u_11 / Dachflaeche  :0 (u_14 / Gebaeude))  :1-of (u_3 / als  :2 (u_4 / Flachdaecher  :0 (u_8 / begruent)))  :1-of (u_17 / auf  :2 (u_18 / Flaeche  :0 (u_22 / bezeichnet  :0 (u_25 / BB2)))))"  # noqa
     out_graph_str = read_and_write_graph(in_graph_str)
     assert in_graph_str == out_graph_str
+
+
+def merge_graphs(graphs: List[nx.DiGraph]):
+    merged_graph = nx.DiGraph()
+    for g in graphs:
+        merged_graph = nx.compose(merged_graph, g)
+    return merged_graph
 
 
 if __name__ == "__main__":
