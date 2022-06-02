@@ -17,15 +17,14 @@ from tuw_nlp.text.preprocessor import Preprocessor
 
 class To4lang:
     def __init__(self, lang, nlp_cache, cache_dir=None):
-        if lang == 'de':
+        if lang == "de":
+            nlp = CustomStanzaPipeline(processors="tokenize,mwt,pos,lemma,depparse")
+        elif lang == "en":
             nlp = CustomStanzaPipeline(
-                processors='tokenize,mwt,pos,lemma,depparse')
-        elif lang == 'en':
-            nlp = stanza.Pipeline(
-                'en', processors='tokenize,mwt,pos,lemma,depparse')
-        elif lang == 'en_bio':
-            nlp = stanza.Pipeline(
-                'en', package="craft")
+                "en", processors="tokenize,mwt,pos,lemma,depparse"
+            )
+        elif lang == "en_bio":
+            nlp = CustomStanzaPipeline("en", package="craft")
         assert lang, "TextTo4lang does not have lang set"
 
         self.lang = lang
@@ -44,24 +43,27 @@ class To4lang:
         fourlang_graph = FourLang(def_graph, root, self.graph_lexical)
         if len(def_graph.nodes()) > 0:
             if strategy == "None":
-                graph.merge_definition_graph(
-                    fourlang_graph, node, substitute)
+                graph.merge_definition_graph(fourlang_graph, node, substitute)
             elif strategy == "whitelisting":
                 fourlang_graph.whitelisting()
-                graph.merge_definition_graph(
-                    fourlang_graph, node, substitute)
+                graph.merge_definition_graph(fourlang_graph, node, substitute)
 
         return [node[1]["name"] for node in fourlang_graph.G.nodes(data=True)]
 
-    def expand(self, graph, depth=1, substitute=False, expand_set=set(), strategy="None", use_concept_def=False):
+    def expand(
+        self, graph, depth=1, substitute=False, expand_set=set(), strategy="None", use_concept_def=False
+    ):
         if depth == 0:
             return
 
         if not expand_set:
             nodes = [node for node in graph.G.nodes(data=True)]
         else:
-            nodes = [node for node in graph.G.nodes(
-                data=True) if node[1]["name"] in expand_set]
+            nodes = [
+                node
+                for node in graph.G.nodes(data=True)
+                if node[1]["name"] in expand_set
+            ]
         for d_node, node_data in nodes:
             if all(
                     elem not in node_data
@@ -124,7 +126,7 @@ class To4lang:
         graph.update_nodes(node_dict)
 
     def parse(self, sen):
-        fl = self.ud_fl.parse(sen, 'ud', "fl", 'amr-sgraph-src')
+        fl = self.ud_fl.parse(sen, "ud", "fl", "amr-sgraph-src")
 
         graph, root = pn_to_graph(fl)
 
@@ -148,7 +150,13 @@ class TextTo4lang(To4lang):
 
             fourlang = FourLang(graph, root, self.graph_lexical)
 
-            self.expand(fourlang, depth=depth, substitute=substitute, expand_set=expand_set, strategy=strategy)
+            self.expand(
+                fourlang,
+                depth=depth,
+                substitute=substitute,
+                expand_set=expand_set,
+                strategy=strategy,
+            )
             yield fourlang.G
 
 
@@ -191,8 +199,9 @@ def get_args():
 
 def main():
     logging.basicConfig(
-        format="%(asctime)s : " +
-        "%(module)s (%(lineno)s) - %(levelname)s - %(message)s")
+        format="%(asctime)s : "
+        + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
+    )
     logging.getLogger().setLevel(logging.WARNING)
     args = get_args()
     preproc = Preprocessor(args.preprocessor)
@@ -202,8 +211,8 @@ def main():
                 fl_graphs = list(tfl(preproc(line.strip())))
             except (TypeError, IndexError, KeyError):
                 traceback.print_exc()
-                sys.stderr.write(f'error on line {i}: {line}')
-                print('ERROR')
+                sys.stderr.write(f"error on line {i}: {line}")
+                print("ERROR")
                 continue
                 # sys.exit(-1)
 
